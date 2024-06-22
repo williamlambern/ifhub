@@ -42,7 +42,7 @@
 	position:absolute;
 	right:28px;
 	margin:6px 0;
-	background: url('https://filestore.williamlambern.repl.co/cdn/wz7q8Cl2bKHC7snRgjN5/search-icon.png') no-repeat 0 -46px;
+	background: url('./search-icon.png') no-repeat 0 -46px;
 	text-decoration:none;
 	filter: alpha(opacity=80);
 	opacity: 0.8;
