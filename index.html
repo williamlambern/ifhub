@@ -363,7 +363,7 @@
         }).addTo(map);
 
         function redirectToPlane(data){
-          location.href= window.location.href+'?flightid='+data+'&serverid='+serverurl
+          location.href= 'https://ifhub.onrender.com/?flightid='+data+'&serverid='+serverurl
         }
 
       	function customTip(text,val) {
@@ -572,7 +572,7 @@
                       dial = '#ed944d'
                     }
 
-                    link = window.location+'?flightid=' + inboundList[j]['flightid'] + '&serverid=' + serverurl
+                    link = 'https://ifhub.onrender.com/?flightid=' + inboundList[j]['flightid'] + '&serverid=' + serverurl
                     try{
                       txt = txt + "<div style='background-color:#e7e7e7'> <p style='color:"+dial+";float:left;'>⬤</p> <p style='float:right; margin-right: 5px; background-color: black;'>[Due " +inboundList[j]['format'] + "]<br>(" +inboundList[j]['time'] + ")</p> <br> <a style='margin-left: 5px; color:black;'> " +inboundList[j]['municipality'] + '</a>' + "<br><a style='color: grey; margin-left: 5px;' href='" + link + "'>" + latlngs_dict[inboundList[j]['flightid']]['airline'] + " // " + latlngs_dict[inboundList[j]['flightid']]['aircraft'] + "</a><hr></div>"
                     } catch(err){
@@ -598,7 +598,7 @@
                       dial = '#ed944d'
                     }
 
-                    link = window.location+'?flightid=' + outboundList[j]['flightid'] + '&serverid=' + serverurl
+                    link = 'https://ifhub.onrender.com/?flightid=' + outboundList[j]['flightid'] + '&serverid=' + serverurl
                     try{
                       txt = txt +"<div style='background-color:#e7e7e7'> <p style='color:"+dial+";float:left;'>⬤</p> <p style='float:right; margin-right: 5px; background-color: black;'>[Departs " +outboundList[j]['format'] + "]<br>(" +outboundList[j]['status'] + ")</p> <br> <a style='margin-left: 5px; color:black;'> " +outboundList[j]['municipality'] + '</a>' + "<br><a style='color: grey; margin-left: 5px;' href='" + link + "'>" + latlngs_dict[outboundList[j]['flightid']]['airline'] + " // " + latlngs_dict[outboundList[j]['flightid']]['aircraft'] + "</a><hr></div>"
 
