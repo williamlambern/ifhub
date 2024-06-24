@@ -611,6 +611,7 @@
 
                   document.getElementById("rcorners4").innerHTML = txt
                   TYPE = 'airport'
+                  map.removeLayer(flightpath);
                   openNav()
                 })).on('popupclose', function(d) {
                   closeNav()
@@ -742,7 +743,7 @@
                     map.removeLayer(flightpath);
                     closeNav()
                   }).addTo(markerGroup)
-                  .bindPopup(popupName)
+                  .bindPopup(popupName, {autoPan: false})
                   .on('click', dropdown)
 
                   plane_markers[flightid] = marker
@@ -776,6 +777,7 @@
                   flight_dict[popupName] = {head:popupName+ ' ('+ callsign +")<br><p style='font-size:10px'>" + LIVERY_DATA[aircraftId][counter]['AircraftName'] + ' - ' + LIVERY_DATA[aircraftId][counter]['LiveryName'] +'</p>', text:"Speed : " + parseInt(speed) + " &nbsp knots" + "<br><br>" + "Altitude : " + parseInt(alt) + "&nbsp FT ("+parseInt(vspeed)+" fpm)<br><br>Heading : " + parseInt(heading) + "°", foot:organisation_message, fid:flightid}
 
                   function dropdown(e){
+                    //e.target.closePopup() controversial, maybe only for larger screens?
                     ifclick == 'yes'
                     TYPE = 'plane'
                     CURRENT_TRACK = flight_dict[e.target.getPopup()._content]["fid"]
