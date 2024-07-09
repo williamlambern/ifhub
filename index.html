@@ -564,7 +564,7 @@
                   document.getElementById("rcorners3").style.background = trafficColour
 
 
-                  txt = "Arrival Board - click on the airline for more info. <br> <hr>"
+                  txt = "&nbsp Arrival Board - click on the airline for more info. <br> <hr>"
                   for (j=0; j<Math.min(5, inboundList.length-1); j++){
                     if (inboundList[j]['time'] == 'On Time'){
                       dial = '#c1e1c1'
@@ -574,17 +574,17 @@
 
                     link = 'https://ifhub.onrender.com/?flightid=' + inboundList[j]['flightid'] + '&serverid=' + serverurl
                     try{
-                      txt = txt + "<div style='background-color:#e7e7e7'> <p style='color:"+dial+";float:left;'>⬤</p> <p style='float:right; margin-right: 5px; background-color: black;'>[Due " +inboundList[j]['format'] + "]<br>(" +inboundList[j]['time'] + ")</p> <br> <a style='margin-left: 5px; color:black;'> " +inboundList[j]['municipality'] + '</a>' + "<br><a style='color: grey; margin-left: 5px;' href='" + link + "'>" + latlngs_dict[inboundList[j]['flightid']]['airline'] + " // " + latlngs_dict[inboundList[j]['flightid']]['aircraft'] + "</a><hr></div>"
+                      txt = txt + "<div style='background-color:#e7e7e7'> <p style='color:"+dial+";float:left;'>&nbsp ⬤</p> <p style='float:right; margin-right: 5px; background-color: black;'>[Due " +inboundList[j]['format'] + "]<br>(" +inboundList[j]['time'] + ")</p> <br> <a style='margin-left: 5px; color:black;'> " +inboundList[j]['municipality'] + '</a>' + "<br><a style='color: grey; margin-left: 5px;' href='" + link + "'>" + latlngs_dict[inboundList[j]['flightid']]['airline'] + " // " + latlngs_dict[inboundList[j]['flightid']]['aircraft'] + "</a><hr></div>"
                     } catch(err){
                       console.log(err)
                     }
                   }
 
-                  txt += "<br><br>Departure Board - click on the airline for more info. <br> <hr>"
+                  txt += "<br><br>&nbsp Departure Board - click on the airline for more info. <br> <hr>"
 
                   for (j=0; j<Math.min(5, outboundList.length); j++){
                     // formatting
-                    timeLeftMins = 20 - 0.5 * latlngs_dict[inboundList[j]['flightid']]['length']
+                    timeLeftMins = 20 - 0.5 * latlngs_dict[outboundList[j]['flightid']]['length']
                     if (outboundList[j]['status'] == 'Scheduled'){
                       dial = '#ABB0B8'
                       if (timeLeftMins > 10 && timeLeftMins < 16){
@@ -600,7 +600,7 @@
 
                     link = 'https://ifhub.onrender.com/?flightid=' + outboundList[j]['flightid'] + '&serverid=' + serverurl
                     try{
-                      txt = txt +"<div style='background-color:#e7e7e7'> <p style='color:"+dial+";float:left;'>⬤</p> <p style='float:right; margin-right: 5px; background-color: black;'>[Departs " +outboundList[j]['format'] + "]<br>(" +outboundList[j]['status'] + ")</p> <br> <a style='margin-left: 5px; color:black;'> " +outboundList[j]['municipality'] + '</a>' + "<br><a style='color: grey; margin-left: 5px;' href='" + link + "'>" + latlngs_dict[outboundList[j]['flightid']]['airline'] + " // " + latlngs_dict[outboundList[j]['flightid']]['aircraft'] + "</a><hr></div>"
+                      txt = txt +"<div style='background-color:#e7e7e7'> <p style='color:"+dial+";float:left;'>&nbsp ⬤</p> <p style='float:right; margin-right: 5px; background-color: black;'>[Departs " +outboundList[j]['format'] + "]<br>(" +outboundList[j]['status'] + ")</p> <br> <a style='margin-left: 5px; color:black;'> " +outboundList[j]['municipality'] + '</a>' + "<br><a style='color: grey; margin-left: 5px;' href='" + link + "'>" + latlngs_dict[outboundList[j]['flightid']]['airline'] + " // " + latlngs_dict[outboundList[j]['flightid']]['aircraft'] + "</a><hr></div>"
 
                     } catch(err){
                       console.log(err)
@@ -621,7 +621,7 @@
                 airport_markers[name] = marker
                 ttl = ''
                 try{
-                  ttl = 'Airport : ' + name + "<br><p style='font-size:10px'>" + AIRPORT_LOCATION_DATA[name]['name'] + "</p>"
+                  ttl = 'Airport : ' + AIRPORT_LOCATION_DATA[name]['iata_code'] + " ("+name + ")<br><p style='font-size:10px'>" + AIRPORT_LOCATION_DATA[name]['name'] + "</p>"
                 } catch(err){
                   ttl = 'Airport : ' + name
                 }
@@ -706,7 +706,14 @@
                   var distance = (speed/1.94384)*60  //Longer to stop the stopping!
 
 
+
                   if(distance > 500){
+                    // first work out how far it has moved since the server request and our request
+                    deltaTimeOfRequest = (Date.now()/1000 - response[0]['timeOfRequest'])
+                    var p =   destinationPoint(lat, long, ((speed/1.94384)*deltaTimeOfRequest), heading)
+                    var lat = p[0]
+                    var long = p[1]
+                    // now our simulated distance
                     var p = destinationPoint(lat, long, distance, heading);
                     var predictionlat = p[0]
                     var predictionlong = p[1]
@@ -916,12 +923,15 @@
                             actualArrival = 'Pending'
                           }
 
-
+                          start_iata = AIRPORT_LOCATION_DATA[startAirport]['iata_code']
+                          end_iata = AIRPORT_LOCATION_DATA[endAirport]['iata_code']
+                          start_municipality = AIRPORT_LOCATION_DATA[startAirport]['municipality']
+                          end_municipality = AIRPORT_LOCATION_DATA[endAirport]['municipality']
 
                           if (actualArrival == 'Pending'){
-                            document.getElementById("rcorners3").innerHTML = "<span style='display:inline; float:left; line-height: 0.5em;'>&nbsp "+startAirport+" ["+scheduledDeparture+"]<br><p style='font-size: 10px;'>Actual ("+actualDeparture+")</p></span> <span style='display:inline; float:right; line-height: 0.5em;'>"+endAirport+" ["+scheduledArrival+"] &nbsp<br><p style='font-size: 10px;'>Estimated ("+predictedArrival+")*</p></span> <spanstyle='display:inline; line-height: 0.5em;'>⮕</span>  <br> <br> <div class='wrapper'><div class='progress-bar'><span class='progress-bar-fill' style='width:"+progress+"%;'></span></div></div>"
+                            document.getElementById("rcorners3").innerHTML = "<span style='display:inline; float:left; line-height: 0.5em;'>&nbsp "+start_iata+" ["+scheduledDeparture+"]<br><p style='font-size: 10px;'>"+"</p><p style='font-size: 10px;'>Actual ("+actualDeparture+")</p></span> <span style='display:inline; float:right; line-height: 0.5em;'>"+end_iata+" ["+scheduledArrival+"] &nbsp<br><p style='font-size: 10px;'>Estimated ("+predictedArrival+")*</p></span> <spanstyle='display:inline; line-height: 0.5em;'>⮕</span>  <br> <br> <div class='wrapper'><div class='progress-bar'><span class='progress-bar-fill' style='width:"+progress+"%;'></span></div></div>"
                           }else{
-                            document.getElementById("rcorners3").innerHTML = "<span style='display:inline; float:left; line-height: 0.5em;'>&nbsp "+startAirport+" ["+scheduledDeparture+"]<br><p style='font-size: 10px;'>Actual ("+actualDeparture+")</p></span> <span style='display:inline; float:right; line-height: 0.5em;'>"+endAirport+" ["+scheduledArrival+"] &nbsp<br><p style='font-size: 10px;'>Actual ("+actualArrival+")</p></span> <spanstyle='display:inline; line-height: 0.5em;'>⮕</span>  <br> <br> <div class='wrapper'><div class='progress-bar'><span class='progress-bar-fill' style='width:"+progress+"%;'>Arrived at destination.</span></div></div>"
+                            document.getElementById("rcorners3").innerHTML = "<span style='display:inline; float:left; line-height: 0.5em;'>&nbsp "+start_iata+" ["+scheduledDeparture+"]<br><p style='font-size: 10px;'>Actual ("+actualDeparture+")</p></span> <span style='display:inline; float:right; line-height: 0.5em;'>"+end_iata+" ["+scheduledArrival+"] &nbsp<br><p style='font-size: 10px;'>Actual ("+actualArrival+")</p></span> <spanstyle='display:inline; line-height: 0.5em;'>⮕</span>  <br> <br> <div class='wrapper'><div class='progress-bar'><span class='progress-bar-fill' style='width:"+progress+"%;'>Arrived at destination</span></div></div>"
                           }
 
 
