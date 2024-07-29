@@ -824,18 +824,19 @@
                         }
 */
                         try{
-                          startAirport = outboundFlightsDict[flightid]
                           endAirport = inboundFlightsDict[flightid]
-                          oLat = AIRPORT_LOCATION_DATA[startAirport]['coordinates'].split(',')[0]
-                          oLong = AIRPORT_LOCATION_DATA[startAirport]['coordinates'].split(', ')[1]
                           aLat = AIRPORT_LOCATION_DATA[endAirport]['coordinates'].split(',')[0]
                           aLong = AIRPORT_LOCATION_DATA[endAirport]['coordinates'].split(', ')[1]
+                          dist = getDistanceFromLatLonInKm(lat, long, aLat, aLong)
+                          // ^ before in case start not defined.
+                          startAirport = outboundFlightsDict[flightid]
+                          oLat = AIRPORT_LOCATION_DATA[startAirport]['coordinates'].split(',')[0]
+                          oLong = AIRPORT_LOCATION_DATA[startAirport]['coordinates'].split(', ')[1]
 
                           delayedCheck = false
                           now = new Date()
                           // Predicted arrival
 
-                          dist = getDistanceFromLatLonInKm(lat, long, aLat, aLong)
                           timeToFly = dist / (speed * 1.852)
                           numberOfMlSeconds = now.getTime();
                           progress = dist
@@ -1007,6 +1008,15 @@
                            }
                        }
 
+                       if (typeof aLat !== 'undefined'){
+                         if (dist > 5){
+                           currentplace = new L.LatLng(lat, long)
+                           arrivalplace = new L.LatLng(aLat, aLong)
+                           dashedpart = new L.Polyline([currentplace, arrivalplace], {color: 'black', dashArray : '5,5', weight: 2})
+                           dashedpart.addTo(flightpath)
+                         }
+                       }
+
                        data = {
                           datasets: [{
                             label: 'Altitude',
@@ -1050,16 +1060,6 @@
                                       }
                                     }]}}});
                         document.getElementById('canvas').style.backgroundColor = 'rgb(255,255,255)';
-                        var end = (new L.LatLng(response[response.length - 1].Latitude, response[response.length - 1  ].Longitude))
-                        var location = (new L.LatLng(lat, long))
-                        Geodesic =  (new L.geodesic([], {
-                        	weight: 3,
-                        	opacity: 0.6,
-                        	color: line_colour,
-                        	steps: 50
-                        }))
-                        Geodesic.setLatLngs([[end, location]]);
-                        Geodesic.addTo(flightpath)
                         flightpath.addTo(map)
                       }
                     }
