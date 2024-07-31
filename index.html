@@ -367,7 +367,6 @@
         }
 
       	function customTip(text,val) {
-          console.log(text)
           fid = name_flightid[text]
           if (delayedForSearch[text] == 'On Time'){
             msg = delayedForSearch[text]
@@ -384,6 +383,7 @@
 
       var markerGroup = L.layerGroup().addTo(map);
       var atcGroup = L.layerGroup().addTo(map);
+      var nonAtcGroup = L.layerGroup().addTo(map);
       var flightpath = L.layerGroup().addTo(map);
       var controlSearch = new L.Control.Search({
                         		layer: markerGroup,
@@ -392,6 +392,14 @@
                             buildTip:customTip
                         	});
 	    map.addControl(controlSearch);
+      map.on('zoomend', function(){
+        if (map.getZoom() < 7){
+          map.removeLayer(nonAtcGroup)
+        } else {
+          map.addLayer(nonAtcGroup)
+        }
+      })
+
       var myLineChart;
 
       function airport(serverurl){
@@ -405,7 +413,9 @@
             response = JSON.parse(xhr.responseText)['result'];
             all_facilities = {}
             map.removeLayer(atcGroup)
+            map.removeLayer(nonAtcGroup)
             atcGroup = L.layerGroup().addTo(map);
+            nonAtcGroup = L.layerGroup().addTo(map);
             active_atc = {}
             airport_markers = {}
             date = new Date()
@@ -413,6 +423,7 @@
             // global for timeline
             inboundFlightsDict = {}
             outboundFlightsDict = {}
+            var hasActiveATC = []
             for (i = 0; i < response.length; i++) {
 
               // loop through inbound and outbound and add to dict
@@ -425,12 +436,14 @@
               }
 
               if (response[i]['atcFacilities'].length > 0){
+                var icao = response[i]['airportIcao']
+                hasActiveATC.push(icao)
                 for (j = 0; j < response[i]['atcFacilities'].length; j++){
-                  var lat = response[i]['atcFacilities'][j].latitude
-                  var long = response[i]['atcFacilities'][j].longitude
-                  var name = response[i]['atcFacilities'][j].airportName
-                  var controller = response[i]['atcFacilities'][j].username
-                  var type = response[i]['atcFacilities'][j].type
+                  var lat = response[i]['atcFacilities'][0].latitude
+                  var long = response[i]['atcFacilities'][0].longitude
+                  var name = response[i]['atcFacilities'][0].airportName
+                  var controller = response[i]['atcFacilities'][0].username
+                  var type = response[i]['atcFacilities'][0].type
                   var atc_converted = atc_frequency_convert[type]
                   if (active_atc.hasOwnProperty(name) == false){
                     active_atc[name] = atc_converted + ' : ' + controller
@@ -438,213 +451,236 @@
                     active_atc[name] = active_atc[name] + '<br>' + atc_converted + ' : ' + controller
                   }
                 }
-                var marker = L.marker([lat, long], {title:name}).on('click', L.bind(function(e){
-                  ifclick = "yes"
-                  CURRENT_TRACK = e.target.getPopup()._content
-                  inbound = response[atc_dict[e.target.getPopup()._content]['index']]['inboundFlights']
-                  outbound = response[atc_dict[e.target.getPopup()._content]['index']]['outboundFlights']
-                  inboundList = []
-                  outboundList = []
+              } else {
+                try {
+                  var icao = response[i]['airportIcao']
+                  var lat = AIRPORT_LOCATION_DATA[icao]['coordinates'].split(',')[0]
+                  var long = AIRPORT_LOCATION_DATA[icao]['coordinates'].split(',')[1]
+                  var name = AIRPORT_LOCATION_DATA[icao]['name']
+                  active_atc[name] = 'This airport has no active ATC.'
+                } catch(err){
+                  continue;
+                }
+              }
+              var marker = L.marker([lat, long], {title:name}).on('click', L.bind(function(e){
+                ifclick = "yes"
+                CURRENT_TRACK = e.target.getPopup()._content
+                inbound = response[atc_dict[e.target.getPopup()._content]['index']]['inboundFlights']
+                outbound = response[atc_dict[e.target.getPopup()._content]['index']]['outboundFlights']
+                inboundList = []
+                outboundList = []
+                if (response[atc_dict[e.target.getPopup()._content]['index']]['atcFacilities'].length > 0){
                   lat = response[atc_dict[e.target.getPopup()._content]['index']]['atcFacilities'][0]['latitude']
                   long = response[atc_dict[e.target.getPopup()._content]['index']]['atcFacilities'][0]['longitude']
+                } else{
+                  var icao = response[atc_dict[e.target.getPopup()._content]['index']]['airportIcao']
+                  lat = AIRPORT_LOCATION_DATA[icao]['coordinates'].split(',')[0]
+                  long = AIRPORT_LOCATION_DATA[icao]['coordinates'].split(',')[1]
+                }
 
-                  delayedCount = 0
-                  totalCount = 0
-                  totalStillatAirport = 0
 
-                  // Inbound traffic handler
+                delayedCount = 0
+                totalCount = 0
+                totalStillatAirport = 0
 
-                  for (j=0; j< inbound.length; j++){
-                    plane = inbound[j]
-                    //totalCount += 1
-                    try{
+                // Inbound traffic handler
+                for (j=0; j< inbound.length; j++){
+                  plane = inbound[j]
+                  //totalCount += 1
+                  try{
+                    dist = getDistanceFromLatLonInKm(latlngs_dict[plane]['lat'], latlngs_dict[plane]['lng'], lat, long)
+                    t = parseInt((dist / (latlngs_dict[plane]['speed'] * 1.852)) * 60 + latlngs_dict[plane]['alt']/3000)
+                    if (latlngs_dict[plane]['alt'] > 15000){
+                      t += latlngs_dict[plane]['alt']/2000
+                    }
+
+                    numberOfMlSeconds = date.getTime();
+                    addMlSeconds = 60 * 1000 * (t);
+                    newDateObj = new Date(numberOfMlSeconds + addMlSeconds);
+                    timeFormatted = (newDateObj.getHours() < 10 ? "0" : "") + newDateObj.getHours() + ":" + (newDateObj.getMinutes() < 10 ? "0" : "") + newDateObj.getMinutes()
+
+                    endAirport = inboundFlightsDict[plane]
+                    startAirport = outboundFlightsDict[plane]
+                    aLat = AIRPORT_LOCATION_DATA[endAirport]['coordinates'].split(',')[0]
+                    aLong = AIRPORT_LOCATION_DATA[endAirport]['coordinates'].split(', ')[1]
+                    speed = latlngs_dict[plane]['speed']
+                    dist = getDistanceFromLatLonInKm(lat, long, aLat, aLong)
+                    timeToFly = dist / (speed * 1.852)
+                    numberOfMlSeconds = date.getTime();
+                    progress = dist
+                    addMlSeconds = 60 * 60 * 1000 * (timeToFly);
+                    newDateObj4 = new Date(numberOfMlSeconds + addMlSeconds);
+                    predictedArrival = (newDateObj4.getHours() < 10 ? "0" : "") + newDateObj4.getHours() + ":" + (newDateObj4.getMinutes() < 10 ? "0" : "") + newDateObj4.getMinutes()
+
+                    if (newDateObj4 > newDateObj){
+                      latlngs_dict[plane]['time'] = 'Delayed'
+                    }
+
+
+
+                    if (latlngs_dict[plane]['speed'] > 100){
+                      try{
+                        inboundList.push({'name' : latlngs_dict[plane]['username'], 'dist' : dist, 'time': latlngs_dict[plane]['time'], 'due' : t, 'format' : timeFormatted, 'flightid' : plane, 'municipality' : AIRPORT_LOCATION_DATA[startAirport]['municipality']})
+                      }catch(err){
+                        inboundList.push({'name' : latlngs_dict[plane]['username'], 'dist' : dist, 'time': latlngs_dict[plane]['time'], 'due' : t, 'format' : timeFormatted, 'flightid' : plane})
+                      }
+                    }
+                  }catch(err){
+                      console.log(err)
+                  }
+                }
+
+                // Outbound traffic handler
+                for (j=0; j < outbound.length; j++){
+                  try{
+                    plane = outbound[j]
+                    totalCount += 1
+                    if (latlngs_dict[plane]['speed'] < 100){
+                      // Now check still at departure airport
                       dist = getDistanceFromLatLonInKm(latlngs_dict[plane]['lat'], latlngs_dict[plane]['lng'], lat, long)
-                      t = parseInt((dist / (latlngs_dict[plane]['speed'] * 1.852)) * 60 + latlngs_dict[plane]['alt']/3000)
-                      if (latlngs_dict[plane]['alt'] > 15000){
-                        t += latlngs_dict[plane]['alt']/2000
-                      }
+                      if (dist < 10){
+                        timeLeftMins = 20 - 0.5 * latlngs_dict[plane]['length']
+                        totalStillatAirport += 1
+                        if (timeLeftMins > 0){
+                          numberOfMlSeconds = date.getTime();
+                          addMlSeconds = 60 * 1000 * (timeLeftMins);
+                          newDateObj = new Date(numberOfMlSeconds + addMlSeconds);
+                          timeFormatted = (newDateObj.getHours() < 10 ? "0" : "") + newDateObj.getHours() + ":" + (newDateObj.getMinutes() < 10 ? "0" : "") + newDateObj.getMinutes()
+                        } else {
+                          delayedCount += 1
+                          numberOfMlSeconds = date.getTime();
+                          addMlSeconds = 60 * 1000 * (timeLeftMins);
+                          newDateObj = new Date(numberOfMlSeconds + addMlSeconds);
+                          timeFormatted = (newDateObj.getHours() < 10 ? "0" : "") + newDateObj.getHours() + ":" + (newDateObj.getMinutes() < 10 ? "0" : "") + newDateObj.getMinutes()
+                        }
 
-                      numberOfMlSeconds = date.getTime();
-                      addMlSeconds = 60 * 1000 * (t);
-                      newDateObj = new Date(numberOfMlSeconds + addMlSeconds);
-                      timeFormatted = (newDateObj.getHours() < 10 ? "0" : "") + newDateObj.getHours() + ":" + (newDateObj.getMinutes() < 10 ? "0" : "") + newDateObj.getMinutes()
-
-                      endAirport = inboundFlightsDict[plane]
-                      startAirport = outboundFlightsDict[plane]
-                      aLat = AIRPORT_LOCATION_DATA[endAirport]['coordinates'].split(',')[0]
-                      aLong = AIRPORT_LOCATION_DATA[endAirport]['coordinates'].split(', ')[1]
-                      speed = response[atc_dict[e.target.getPopup()._content]['index']]['atcFacilities'][0]['speed']
-                      dist = getDistanceFromLatLonInKm(lat, long, aLat, aLong)
-                      timeToFly = dist / (speed * 1.852)
-                      numberOfMlSeconds = date.getTime();
-                      progress = dist
-                      addMlSeconds = 60 * 60 * 1000 * (timeToFly);
-                      newDateObj4 = new Date(numberOfMlSeconds + addMlSeconds);
-                      predictedArrival = (newDateObj4.getHours() < 10 ? "0" : "") + newDateObj4.getHours() + ":" + (newDateObj4.getMinutes() < 10 ? "0" : "") + newDateObj4.getMinutes()
-
-                      if (newDateObj4 > newDateObj){
-                        latlngs_dict[plane]['time'] = 'Delayed'
-                      }
-
-
-
-                      if (latlngs_dict[plane]['speed'] > 100){
-                        try{
-                          inboundList.push({'name' : latlngs_dict[plane]['username'], 'dist' : dist, 'time': latlngs_dict[plane]['time'], 'due' : t, 'format' : timeFormatted, 'flightid' : plane, 'municipality' : AIRPORT_LOCATION_DATA[startAirport]['municipality']})
-                        }catch(err){
-                          inboundList.push({'name' : latlngs_dict[plane]['username'], 'dist' : dist, 'time': latlngs_dict[plane]['time'], 'due' : t, 'format' : timeFormatted, 'flightid' : plane})
+                        endAirport = inboundFlightsDict[plane]
+                        if (latlngs_dict[plane]['time'] === 'On Time'){
+                          outboundList.push({'name' : latlngs_dict[plane]['username'], 'dist' : dist, 'due': timeLeftMins, 'time' : timeFormatted, 'format' : timeFormatted, 'flightid' : plane, 'status' : 'Scheduled', 'municipality': AIRPORT_LOCATION_DATA[endAirport]['municipality']})
+                        } else {
+                          timeFormatted += '*'
+                          outboundList.push({'name' : latlngs_dict[plane]['username'], 'dist' : dist, 'due': timeLeftMins, 'time' : timeFormatted, 'format' : timeFormatted, 'flightid' : plane, 'status' : latlngs_dict[plane]['time'], 'municipality': AIRPORT_LOCATION_DATA[endAirport]['municipality']})
                         }
                       }
-                    }catch(err){
-                        console.log(err)
+                    }
+                  } catch(err){
+                    console.log(err, endAirport)
+                  }
+                }
+
+
+                inboundList.sort(compare)
+                outboundList.sort(compare)
+                ratio = delayedCount / totalStillatAirport
+
+                trafficText = '✅ Airport is quiet, no delays expected.'
+                trafficColour = '#C1E1C1'
+                if (totalStillatAirport >= 5){
+                  if (ratio > 0.2){
+                    trafficText = '⚠️ Airport is busy, possible delays.'
+                    trafficColour = '#fdfd96'
+                    if (ratio > 0.4){
+                      trafficText = '❌ Airport is very busy, expect delays.'
+                      trafficColour = '#ff6961'
                     }
                   }
+                }
 
-                  // Outbound traffic handler
+                document.getElementById("rcorners1").style.color = "#FFFFFF";
+                document.getElementById("rcorners1").innerHTML = (atc_dict[e.target.getPopup()._content]["title"])
+                document.getElementById("rcorners2").innerHTML = (atc_dict[e.target.getPopup()._content]["text"])
+                document.getElementById("rcorners3").innerHTML = trafficText
+                document.getElementById("rcorners3").style.background = trafficColour
 
-                  for (j=0; j < outbound.length; j++){
-                    try{
-                      plane = outbound[j]
-                      totalCount += 1
-                      if (latlngs_dict[plane]['speed'] < 100){
-                        // Now check still at departure airport
-                        dist = getDistanceFromLatLonInKm(latlngs_dict[plane]['lat'], latlngs_dict[plane]['lng'], lat, long)
-                        if (dist < 10){
-                          timeLeftMins = 20 - 0.5 * latlngs_dict[plane]['length']
-                          totalStillatAirport += 1
-                          if (timeLeftMins > 0){
-                            numberOfMlSeconds = date.getTime();
-                            addMlSeconds = 60 * 1000 * (timeLeftMins);
-                            newDateObj = new Date(numberOfMlSeconds + addMlSeconds);
-                            timeFormatted = (newDateObj.getHours() < 10 ? "0" : "") + newDateObj.getHours() + ":" + (newDateObj.getMinutes() < 10 ? "0" : "") + newDateObj.getMinutes()
-                          } else {
-                            delayedCount += 1
-                            numberOfMlSeconds = date.getTime();
-                            addMlSeconds = 60 * 1000 * (timeLeftMins);
-                            newDateObj = new Date(numberOfMlSeconds + addMlSeconds);
-                            timeFormatted = (newDateObj.getHours() < 10 ? "0" : "") + newDateObj.getHours() + ":" + (newDateObj.getMinutes() < 10 ? "0" : "") + newDateObj.getMinutes()
-                          }
 
-                          endAirport = inboundFlightsDict[plane]
-                          if (latlngs_dict[plane]['time'] === 'On Time'){
-                            outboundList.push({'name' : latlngs_dict[plane]['username'], 'dist' : dist, 'due': timeLeftMins, 'time' : timeFormatted, 'format' : timeFormatted, 'flightid' : plane, 'status' : 'Scheduled', 'municipality': AIRPORT_LOCATION_DATA[endAirport]['municipality']})
-                          } else {
-                            timeFormatted += '*'
-                            outboundList.push({'name' : latlngs_dict[plane]['username'], 'dist' : dist, 'due': timeLeftMins, 'time' : timeFormatted, 'format' : timeFormatted, 'flightid' : plane, 'status' : latlngs_dict[plane]['time'], 'municipality': AIRPORT_LOCATION_DATA[endAirport]['municipality']})
-                          }
-                        }
-                      }
-                    } catch(err){
-                      console.log(err, endAirport)
-                    }
+                txt = "&nbsp Arrival Board - click on the airline for more info. <br> <hr>"
+                for (j=0; j<Math.min(5, inboundList.length-1); j++){
+                  if (inboundList[j]['time'] == 'On Time'){
+                    dial = '#c1e1c1'
+                  } else {
+                    dial = '#ed944d'
                   }
 
-
-                  inboundList.sort(compare)
-                  outboundList.sort(compare)
-                  ratio = delayedCount / totalStillatAirport
-
-                  trafficText = '✅ Airport is quiet, no delays expected.'
-                  trafficColour = '#C1E1C1'
-                  if (totalStillatAirport >= 5){
-                    if (ratio > 0.2){
-                      trafficText = '⚠️ Airport is busy, possible delays.'
-                      trafficColour = '#fdfd96'
-                      if (ratio > 0.4){
-                        trafficText = '❌ Airport is very busy, expect delays.'
-                        trafficColour = '#ff6961'
-                      }
-                    }
+                  link = 'https://ifhub.onrender.com/?flightid=' + inboundList[j]['flightid'] + '&serverid=' + serverurl
+                  try{
+                    txt = txt + "<div style='background-color:#e7e7e7'> <p style='color:"+dial+";float:left;'>&nbsp ⬤</p> <p style='float:right; margin-right: 5px; background-color: black;'>[Due " +inboundList[j]['format'] + "]<br>(" +inboundList[j]['time'] + ")</p> <br> <a style='margin-left: 5px; color:black;'> " +inboundList[j]['municipality'] + '</a>' + "<br><a style='color: grey; margin-left: 5px;' href='" + link + "'>" + latlngs_dict[inboundList[j]['flightid']]['airline'] + " // " + latlngs_dict[inboundList[j]['flightid']]['aircraft'] + "</a><hr></div>"
+                  } catch(err){
+                    console.log(err)
                   }
+                }
 
-                  document.getElementById("rcorners1").style.color = "#FFFFFF";
-                  document.getElementById("rcorners1").innerHTML = (atc_dict[e.target.getPopup()._content]["title"])
-                  document.getElementById("rcorners2").innerHTML = (atc_dict[e.target.getPopup()._content]["text"])
-                  document.getElementById("rcorners3").innerHTML = trafficText
-                  document.getElementById("rcorners3").style.background = trafficColour
+                txt += "<br><br>&nbsp Departure Board - click on the airline for more info. <br> <hr>"
 
-
-                  txt = "&nbsp Arrival Board - click on the airline for more info. <br> <hr>"
-                  for (j=0; j<Math.min(5, inboundList.length-1); j++){
-                    if (inboundList[j]['time'] == 'On Time'){
+                for (j=0; j<Math.min(5, outboundList.length); j++){
+                  // formatting
+                  timeLeftMins = 20 - 0.5 * latlngs_dict[outboundList[j]['flightid']]['length']
+                  if (outboundList[j]['status'] == 'Scheduled'){
+                    dial = '#ABB0B8'
+                    if (timeLeftMins > 10 && timeLeftMins < 16){
+                      outboundList[j]['status'] = 'Boarding'
                       dial = '#c1e1c1'
                     } else {
-                      dial = '#ed944d'
-                    }
-
-                    link = 'https://ifhub.onrender.com/?flightid=' + inboundList[j]['flightid'] + '&serverid=' + serverurl
-                    try{
-                      txt = txt + "<div style='background-color:#e7e7e7'> <p style='color:"+dial+";float:left;'>&nbsp ⬤</p> <p style='float:right; margin-right: 5px; background-color: black;'>[Due " +inboundList[j]['format'] + "]<br>(" +inboundList[j]['time'] + ")</p> <br> <a style='margin-left: 5px; color:black;'> " +inboundList[j]['municipality'] + '</a>' + "<br><a style='color: grey; margin-left: 5px;' href='" + link + "'>" + latlngs_dict[inboundList[j]['flightid']]['airline'] + " // " + latlngs_dict[inboundList[j]['flightid']]['aircraft'] + "</a><hr></div>"
-                    } catch(err){
-                      console.log(err)
-                    }
-                  }
-
-                  txt += "<br><br>&nbsp Departure Board - click on the airline for more info. <br> <hr>"
-
-                  for (j=0; j<Math.min(5, outboundList.length); j++){
-                    // formatting
-                    timeLeftMins = 20 - 0.5 * latlngs_dict[outboundList[j]['flightid']]['length']
-                    if (outboundList[j]['status'] == 'Scheduled'){
-                      dial = '#ABB0B8'
-                      if (timeLeftMins > 10 && timeLeftMins < 16){
-                        outboundList[j]['status'] = 'Boarding'
+                        outboundList[j]['status'] = 'Gate closed'
                         dial = '#c1e1c1'
-                      } else {
-                          outboundList[j]['status'] = 'Gate closed'
-                          dial = '#c1e1c1'
-                      }
-                    } else {
-                      dial = '#ed944d'
                     }
-
-                    link = 'https://ifhub.onrender.com/?flightid=' + outboundList[j]['flightid'] + '&serverid=' + serverurl
-                    try{
-                      txt = txt +"<div style='background-color:#e7e7e7'> <p style='color:"+dial+";float:left;'>&nbsp ⬤</p> <p style='float:right; margin-right: 5px; background-color: black;'>[Departs " +outboundList[j]['format'] + "]<br>(" +outboundList[j]['status'] + ")</p> <br> <a style='margin-left: 5px; color:black;'> " +outboundList[j]['municipality'] + '</a>' + "<br><a style='color: grey; margin-left: 5px;' href='" + link + "'>" + latlngs_dict[outboundList[j]['flightid']]['airline'] + " // " + latlngs_dict[outboundList[j]['flightid']]['aircraft'] + "</a><hr></div>"
-
-                    } catch(err){
-                      console.log(err)
-                    }
+                  } else {
+                    dial = '#ed944d'
                   }
 
+                  link = 'https://ifhub.onrender.com/?flightid=' + outboundList[j]['flightid'] + '&serverid=' + serverurl
+                  try{
+                    txt = txt +"<div style='background-color:#e7e7e7'> <p style='color:"+dial+";float:left;'>&nbsp ⬤</p> <p style='float:right; margin-right: 5px; background-color: black;'>[Departs " +outboundList[j]['format'] + "]<br>(" +outboundList[j]['status'] + ")</p> <br> <a style='margin-left: 5px; color:black;'> " +outboundList[j]['municipality'] + '</a>' + "<br><a style='color: grey; margin-left: 5px;' href='" + link + "'>" + latlngs_dict[outboundList[j]['flightid']]['airline'] + " // " + latlngs_dict[outboundList[j]['flightid']]['aircraft'] + "</a><hr></div>"
+
+                  } catch(err){
+                    console.log(err)
+                  }
+                }
 
 
-                  document.getElementById("rcorners4").innerHTML = txt
-                  TYPE = 'airport'
-                  map.removeLayer(flightpath);
-                  openNav()
-                })).on('popupclose', function(d) {
-                  closeNav()
-                })
-                marker.bindPopup(name)
+
+                document.getElementById("rcorners4").innerHTML = txt
+                TYPE = 'airport'
+                map.removeLayer(flightpath);
+                openNav()
+              })).on('popupclose', function(d) {
+                closeNav()
+              })
+              marker.bindPopup(icao)
+              if (hasActiveATC.includes(icao)){
                 atcGroup.addLayer(marker)
-                airport_markers[name] = marker
-                ttl = ''
-                try{
-                  ttl = 'Airport : ' + AIRPORT_LOCATION_DATA[name]['iata_code'] + " ("+name + ")<br><p style='font-size:10px'>" + AIRPORT_LOCATION_DATA[name]['name'] + "</p>"
-                } catch(err){
-                  ttl = 'Airport : ' + name
-                }
-                atc_dict[name]= {title : ttl, text : 'Active Frequencies : <br><br>' + active_atc[name],
-                                   index: i}
-                  //atc_dict[marker.getPopup()] = [{image : ""}, {text: }]
-                }
-                //map.addLayer(atcGroup)
-            }
-            //controlSearch.setLayer(atcGroup)
-            if (ifclick == 'yes' && TO_UPDATE == 'yes'){
-              if (TYPE == 'airport'){
-                id = CURRENT_TRACK
-                at = airport_markers[id]
-                //map.flyTo([at._latlng['lat'], at._latlng['lng']], map.getZoom())
-                at.fire('click')
-                TO_UPDATE = 'no'
-                UPDATING = 'no'
+              } else {
+                nonAtcGroup.addLayer(marker)
+              }
+              if (map.getZoom() < 7){
+                map.removeLayer(nonAtcGroup)
+              }
+              airport_markers[name] = marker
+              ttl = ''
+              try{
+                ttl = 'Airport : ' + AIRPORT_LOCATION_DATA[icao]['iata_code'] + " ("+icao + ")<br><p style='font-size:10px'>" + AIRPORT_LOCATION_DATA[icao]['name'] + "</p>"
+              } catch(err){
+                ttl = 'Airport : ' + name
+              }
+              atc_dict[icao]= {title : ttl, text : 'Active Frequencies : <br><br>' + active_atc[name],
+                                 index: i}
+                //atc_dict[marker.getPopup()] = [{image : ""}, {text: }]
+              }
+              //map.addLayer(atcGroup)
+          }
+          //controlSearch.setLayer(atcGroup)
+          if (ifclick == 'yes' && TO_UPDATE == 'yes'){
+            if (TYPE == 'airport'){
+              id = CURRENT_TRACK
+              at = airport_markers[id]
+              //map.flyTo([at._latlng['lat'], at._latlng['lng']], map.getZoom())
+              at.fire('click')
+              TO_UPDATE = 'no'
+              UPDATING = 'no'
               }
             }
           }
         }
-      }
+
 
       function flight(serverurl, po) {
           //PRELOAD
@@ -852,7 +888,6 @@
                           spawnTime = response[0]['Timings'][0]*1000
 
                           timePassed = (now.getTime() - spawnTime)/(60*1000)
-                          console.log(timePassed)
 
                           dist = getDistanceFromLatLonInKm(oLat, oLong, aLat, aLong)
                           timeToFly = (dist / 890) + 0.75
@@ -890,7 +925,6 @@
                           }
                           if (response[0]['Timings'][1] != 0){
                             newDateObjTwo = new Date(response[0]['Timings'][1]*1000)
-                            console.log(response[0]['Timings'][1])
                             if (newDateObjTwo > newDateObj){
                               delayedCheck = true
                             }
@@ -935,7 +969,6 @@
                             document.getElementById("rcorners3").innerHTML = "<span style='display:inline; float:left; line-height: 0.5em;'>&nbsp "+start_iata+" ["+scheduledDeparture+"]<br><p style='font-size: 10px;'>Actual ("+actualDeparture+")</p></span> <span style='display:inline; float:right; line-height: 0.5em;'>"+end_iata+" ["+scheduledArrival+"] &nbsp<br><p style='font-size: 10px;'>Actual ("+actualArrival+")</p></span> <spanstyle='display:inline; line-height: 0.5em;'>⮕</span>  <br> <br> <div class='wrapper'><div class='progress-bar'><span class='progress-bar-fill' style='width:"+progress+"%;'>Arrived at destination</span></div></div>"
                           }
 
-
                           if (response[0]['Time'] == 'Delayed'){
                             document.getElementById("rcorners3").style.backgroundColor = '#ff6961'
                           }
@@ -951,12 +984,6 @@
                           } else {
                             document.getElementById("rcorners3").style.backgroundColor = '#C1E1C1'
                           }
-
-
-
-
-
-
 
                         } catch (err){
                           console.log(err)
