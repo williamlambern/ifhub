@@ -439,11 +439,11 @@
                 var icao = response[i]['airportIcao']
                 hasActiveATC.push(icao)
                 for (j = 0; j < response[i]['atcFacilities'].length; j++){
-                  var lat = response[i]['atcFacilities'][0].latitude
-                  var long = response[i]['atcFacilities'][0].longitude
-                  var name = response[i]['atcFacilities'][0].airportName
-                  var controller = response[i]['atcFacilities'][0].username
-                  var type = response[i]['atcFacilities'][0].type
+                  var lat = response[i]['atcFacilities'][j].latitude
+                  var long = response[i]['atcFacilities'][j].longitude
+                  var name = response[i]['atcFacilities'][j].airportName
+                  var controller = response[i]['atcFacilities'][j].username
+                  var type = response[i]['atcFacilities'][j].type
                   var atc_converted = atc_frequency_convert[type]
                   if (active_atc.hasOwnProperty(name) == false){
                     active_atc[name] = atc_converted + ' : ' + controller
