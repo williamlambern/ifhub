@@ -516,13 +516,11 @@
                       latlngs_dict[plane]['time'] = 'Delayed'
                     }
 
-
-
                     if (latlngs_dict[plane]['speed'] > 100){
                       try{
                         inboundList.push({'name' : latlngs_dict[plane]['username'], 'dist' : dist, 'time': latlngs_dict[plane]['time'], 'due' : t, 'format' : timeFormatted, 'flightid' : plane, 'municipality' : AIRPORT_LOCATION_DATA[startAirport]['municipality']})
                       }catch(err){
-                        inboundList.push({'name' : latlngs_dict[plane]['username'], 'dist' : dist, 'time': latlngs_dict[plane]['time'], 'due' : t, 'format' : timeFormatted, 'flightid' : plane})
+                        inboundList.push({'name' : latlngs_dict[plane]['username'], 'dist' : dist, 'time': latlngs_dict[plane]['time'], 'due' : t, 'format' : timeFormatted, 'flightid' : plane, 'municipality' : 'Unknown'})
                       }
                     }
                   }catch(err){
@@ -594,7 +592,7 @@
 
 
                 txt = "&nbsp Arrival Board - click on the airline for more info. <br> <hr>"
-                for (j=0; j<Math.min(5, inboundList.length-1); j++){
+                for (j=0; j<Math.min(5, inboundList.length); j++){
                   if (inboundList[j]['time'] == 'On Time'){
                     dial = '#c1e1c1'
                   } else {
