@@ -851,14 +851,8 @@
                         response = JSON.parse(xhr.responseText);
                         map.removeLayer(flightpath)
                         flightpath = L.layerGroup().addTo(map)
-/*
-                        document.getElementById("rcorners3").innerHTML = response[response.length-1]['Status'] + ' (' +  response[0]['Time'] + ')'
-                        if (response[0]['Time'] == 'Delayed'){
-                          document.getElementById("rcorners3").style.backgroundColor = "#ff0000"
-                        } else {
-                          document.getElementById("rcorners3").style.backgroundColor = "#00ff00"
-                        }
-*/
+                        var aLat = ''
+                        var aLong = ''
                         try{
                           endAirport = inboundFlightsDict[flightid]
                           aLat = AIRPORT_LOCATION_DATA[endAirport]['coordinates'].split(',')[0]
@@ -1035,7 +1029,7 @@
                            }
                        }
 
-                       if (typeof aLat !== 'undefined'){
+                       if (aLat != ''){
                          if (dist > 5){
                            currentplace = new L.LatLng(lat, long)
                            arrivalplace = new L.LatLng(aLat, aLong)
