@@ -159,6 +159,7 @@
   <h3 id="rcorners2">Welcome to IFHUB!</h3>
   <canvas id='canvas' style='display: none;'></canvas>
   <h3 id="rcorners4">Oops!</h3>
+  <h3 id='globediv' style='text-align:right;'></h3>
 </div>
 
 <div id="MapContainer"></div>
@@ -306,7 +307,9 @@
       var outboundFlightsDict = {}
       var CURRENT_TRACK = ''
       var TO_UPDATE = 'no'
-
+      var globeflightid;
+      var serverid;
+      var globedelay;
       var atc_frequency_convert = {0 :  "Ground",
                                    1 :  "Tower",
                                    2 :  "Unicom",
@@ -686,6 +689,7 @@
         plane_markers = {}
         delayedForSearch = {}
         var server = serverurl
+        serverid = serverurl
         var response = "";
         xhr4 = new XMLHttpRequest();
 
@@ -744,6 +748,7 @@
                   if(distance > 500){
                     // first work out how far it has moved since the server request and our request
                     deltaTimeOfRequest = (Date.now()/1000 - response[0]['timeOfRequest'])
+                    globedelay = Math.floor(deltaTimeOfRequest)
                     var p =   destinationPoint(lat, long, ((speed/1.94384)*deltaTimeOfRequest), heading)
                     var lat = p[0]
                     var long = p[1]
@@ -839,6 +844,8 @@
                     dataForGraph = []
                     dataForGraphSpeed = []
                     labels = []
+                    airportaltforglobe = 'none'
+                    var globeflightid = flightid
                     var xhr = new XMLHttpRequest()
                     xhr.open('GET', "https://ifhubapi.onrender.com/flightDetails?apikey=ZNvNHJYC5IcLYUMlFpBI&flightid=" + flightid, true);
                     xhr.send();
@@ -855,6 +862,7 @@
                           endAirport = inboundFlightsDict[flightid]
                           aLat = AIRPORT_LOCATION_DATA[endAirport]['coordinates'].split(',')[0]
                           aLong = AIRPORT_LOCATION_DATA[endAirport]['coordinates'].split(', ')[1]
+                          airportaltforglobe = AIRPORT_LOCATION_DATA[endAirport]['elevation_ft']
                           dist = getDistanceFromLatLonInKm(lat, long, aLat, aLong)
                           // ^ before in case start not defined.
                           startAirport = outboundFlightsDict[flightid]
@@ -955,6 +963,13 @@
                           start_municipality = AIRPORT_LOCATION_DATA[startAirport]['municipality']
                           end_municipality = AIRPORT_LOCATION_DATA[endAirport]['municipality']
 
+                          //constuct globe link
+                          if (airportaltforglobe != 'none'){
+                            globelink = '.https://ifhubglobal.onrender.com/?flightid=' + globeflightid + '&serverid=' + serverid + '&airportalt=' + airportaltforglobe + '&globedelay=' + globedelay
+                            console.log(globelink)
+                            document.getElementById("globediv").innerHTML = "<a href="+globelink+" style='font-size:10px; text-align: center;'>[View in globe mode]</p>"
+                          }
+
                           if (actualArrival == 'Pending'){
                             document.getElementById("rcorners3").innerHTML = "<span style='display:inline; float:left; line-height: 0.5em;'>&nbsp "+start_iata+" ["+scheduledDeparture+"]<br><p style='font-size: 10px;'>"+"</p><p style='font-size: 10px;'>Actual ("+actualDeparture+")</p></span> <span style='display:inline; float:right; line-height: 0.5em;'>"+end_iata+" ["+scheduledArrival+"] &nbsp<br><p style='font-size: 10px;'>Estimated ("+predictedArrival+")*</p></span> <spanstyle='display:inline; line-height: 0.5em;'>⮕</span>  <br> <br> <div class='wrapper'><div class='progress-bar'><span class='progress-bar-fill' style='width:"+progress+"%;'></span></div></div>"
                           }else{
@@ -978,7 +993,12 @@
                           }
 
                         } catch (err){
-                          console.log(err)
+                            console.log(err)
+                            if (airportaltforglobe != 'none'){
+                              globelink = 'https://ifhubglobal.onrender.com/?flightid=' + globeflightid + '&serverid=' + serverid + '&airportalt=' + airportaltforglobe + '&globedelay=' + globedelay
+                              console.log(globelink)
+                              document.getElementById("globediv").innerHTML = "<a href="+globelink+" style='font-size:10px; text-align: center;'>[View in globe mode]</p>"
+                            }
                           }
                         //document.getElementById("rcorners3").innerHTML = 'Flying from ' + startAirport + ' to ' + endAirport + ' and will arrive at ' + predictedArrival + ' but is scheduled for ' + scheduledArrival + '. ' + response[0]['Time'] + '. Scheduled departure ' + scheduledDeparture + ', actual departure' + actualDeparture
 
