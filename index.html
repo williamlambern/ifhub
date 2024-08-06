@@ -20,7 +20,6 @@
       box-sizing: border-box;
     }
 
-
     hr{
         height: 2px;
         background-color: #Fbdd05;
@@ -159,7 +158,7 @@
   <h3 id="rcorners2">Welcome to IFHUB!</h3>
   <canvas id='canvas' style='display: none;'></canvas>
   <h3 id="rcorners4">Oops!</h3>
-  <h3 id='globediv' style='text-align:right;'></h3>
+  <h3 id='globediv' style='text-align:right; margin: 0px;'></h3>
 </div>
 
 <div id="MapContainer"></div>
@@ -592,7 +591,7 @@
                 document.getElementById("rcorners2").innerHTML = (atc_dict[e.target.getPopup()._content]["text"])
                 document.getElementById("rcorners3").innerHTML = trafficText
                 document.getElementById("rcorners3").style.background = trafficColour
-
+                document.getElementById("globediv").innerHTML = ''
 
                 txt = "&nbsp Arrival Board - click on the airline for more info. <br> <hr>"
                 for (j=0; j<Math.min(5, inboundList.length); j++){
@@ -833,6 +832,7 @@
                     document.getElementById("rcorners2").innerHTML = (flight_dict[e.target.getPopup()._content]["text"])
                     document.getElementById("rcorners3").innerHTML = 'Please ensure flight plan is correctly filed for route information.'
                     document.getElementById("rcorners4").innerHTML = (flight_dict[e.target.getPopup()._content]["foot"])
+                    document.getElementById("globediv").innerHTML = ''
                     openNav()
                   }
 
@@ -846,6 +846,7 @@
                     labels = []
                     airportaltforglobe = 'none'
                     var globeflightid = flightid
+                    var globelink = ''
                     var xhr = new XMLHttpRequest()
                     xhr.open('GET', "https://ifhubapi.onrender.com/flightDetails?apikey=ZNvNHJYC5IcLYUMlFpBI&flightid=" + flightid, true);
                     xhr.send();
@@ -997,7 +998,7 @@
                             if (airportaltforglobe != 'none'){
                               globelink = 'https://ifhubglobal.onrender.com/?flightid=' + globeflightid + '&serverid=' + serverid + '&airportalt=' + airportaltforglobe + '&globedelay=' + globedelay
                               console.log(globelink)
-                              document.getElementById("globediv").innerHTML = "<a href="+globelink+" style='font-size:10px; text-align: center;'>[View in globe mode]</p>"
+                              document.getElementById("globediv").innerHTML = "<a href="+globelink+" style='font-size:10px; text-align: center; padding: 0px;'>[View in globe mode]</p>"
                             }
                           }
                         //document.getElementById("rcorners3").innerHTML = 'Flying from ' + startAirport + ' to ' + endAirport + ' and will arrive at ' + predictedArrival + ' but is scheduled for ' + scheduledArrival + '. ' + response[0]['Time'] + '. Scheduled departure ' + scheduledDeparture + ', actual departure' + actualDeparture
