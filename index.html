@@ -696,7 +696,6 @@
 
           map.setView((map.getCenter()), map.getZoom())
 
-
           // NETWORK/API
 
           xhr4.open('GET', "https://ifhubapi.onrender.com/flights?apikey=ZNvNHJYC5IcLYUMlFpBI&sessionid=" + serverurl, true);
@@ -968,7 +967,7 @@
                           if (airportaltforglobe != 'none'){
                             globelink = 'https://ifhubglobal.onrender.com/?flightid=' + globeflightid + '&serverid=' + serverid + '&airportalt=' + airportaltforglobe + '&globedelay=' + globedelay
                             console.log(globelink)
-                            document.getElementById("globediv").innerHTML = "<a href="+globelink+" style='font-size:10px; text-align: center;'>[View in globe mode]</p>"
+                            document.getElementById("globediv").innerHTML = "<a href="+globelink+" style='font-size:10px; text-align: center;'>[View in globe mode. This is an experimental feature.]</p>"
                           }
 
                           if (actualArrival == 'Pending'){
@@ -998,7 +997,7 @@
                             if (airportaltforglobe != 'none'){
                               globelink = 'https://ifhubglobal.onrender.com/?flightid=' + globeflightid + '&serverid=' + serverid + '&airportalt=' + airportaltforglobe + '&globedelay=' + globedelay
                               console.log(globelink)
-                              document.getElementById("globediv").innerHTML = "<a href="+globelink+" style='font-size:10px; text-align: center; padding: 0px;'>[View in globe mode]</p>"
+                              document.getElementById("globediv").innerHTML = "<a href="+globelink+" style='font-size:10px; text-align: center; padding: 0px;'>[View in globe mode. This is an experimental feature.]</p>"
                             }
                           }
                         //document.getElementById("rcorners3").innerHTML = 'Flying from ' + startAirport + ' to ' + endAirport + ' and will arrive at ' + predictedArrival + ' but is scheduled for ' + scheduledArrival + '. ' + response[0]['Time'] + '. Scheduled departure ' + scheduledDeparture + ', actual departure' + actualDeparture
@@ -1047,6 +1046,9 @@
                              flightline.addTo(flightpath);
                            }
                        }
+
+                       flightline = new L.Polyline([latlonglist[latlonglist.length-1], [lat, long]], {color : line_colour, smoothFactor : 100, weight : 3})
+                       flightline.addTo(flightpath);
 
                        if (aLat != ''){
                          if (dist > 5){
