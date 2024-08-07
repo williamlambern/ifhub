@@ -951,7 +951,7 @@
                           }
 */
 
-                          if (response[0]['Timings'][2] > 0){
+                          if (response[0]['Timings'][2] > 0 && getDistanceFromLatLonInKm(lat, long, aLat, aLong) < 10){
                             newDateObj = new Date(response[0]['Timings'][2]*1000)
                             actualArrival = (newDateObj.getHours() < 10 ? "0" : "") + newDateObj.getHours() + ":" + (newDateObj.getMinutes() < 10 ? "0" : "") + newDateObj.getMinutes()
                           } else{
@@ -1051,7 +1051,7 @@
                        flightline.addTo(flightpath);
 
                        if (aLat != ''){
-                         if (dist > 5){
+                         if (dist > 10){
                            currentplace = new L.LatLng(lat, long)
                            arrivalplace = new L.LatLng(aLat, aLong)
                            dashedpart = new L.Polyline([currentplace, arrivalplace], {color: 'black', dashArray : '5,5', weight: 2})
