@@ -805,20 +805,24 @@
                     organisation_message = 'Member of ' + response[i].virtualOrganization
                   }
 
-                  counter = 0
-                  for (j=0; j < LIVERY_DATA[aircraftId].length; j++){
-                    if (LIVERY_DATA[aircraftId][j]['LiveryId'] === liveryId){
+                  counter = -1
+                  for (j=0; j < LIVERY_DATA.length-1; j++){
+                    if (LIVERY_DATA[j]['id'] === liveryId){
                       counter = j
+                      break
                     }
                   }
-                  copylatlngs_dict[flightid]['airline'] = LIVERY_DATA[aircraftId][counter]['LiveryName']
-                  if (LIVERY_DATA[aircraftId][counter]['AircraftName'].split(' ').length > 1){
-                    copylatlngs_dict[flightid]['aircraft'] = LIVERY_DATA[aircraftId][counter]['AircraftName'].split(' ')[1]
+                  if (counter == -1){
+                    counter = LIVERY_DATA.length-1
+                  }
+                  copylatlngs_dict[flightid]['airline'] = LIVERY_DATA[counter]['liveryName']
+                  if (LIVERY_DATA[counter]['aircraftName'].split(' ').length > 1){
+                    copylatlngs_dict[flightid]['aircraft'] = LIVERY_DATA[counter]['aircraftName'].split(' ')[1]
                   }else{
-                    copylatlngs_dict[flightid]['aircraft'] = LIVERY_DATA[aircraftId][counter]['AircraftName']
+                    copylatlngs_dict[flightid]['aircraft'] = LIVERY_DATA[counter]['aircraftName']
                   }
 
-                  flight_dict[popupName] = {head:popupName+ ' ('+ callsign +")<br><p style='font-size:10px'>" + LIVERY_DATA[aircraftId][counter]['AircraftName'] + ' - ' + LIVERY_DATA[aircraftId][counter]['LiveryName'] +'</p>', text:"Speed : " + parseInt(speed) + " &nbsp knots" + "<br><br>" + "Altitude : " + parseInt(alt) + "&nbsp FT ("+parseInt(vspeed)+" fpm)<br><br>Heading : " + parseInt(heading) + "°", foot:organisation_message, fid:flightid}
+                  flight_dict[popupName] = {head:popupName+ ' ('+ callsign +")<br><p style='font-size:10px'>" + LIVERY_DATA[counter]['aircraftName'] + ' - ' + LIVERY_DATA[counter]['liveryName'] +'</p>', text:"Speed : " + parseInt(speed) + " &nbsp knots" + "<br><br>" + "Altitude : " + parseInt(alt) + "&nbsp FT ("+parseInt(vspeed)+" fpm)<br><br>Heading : " + parseInt(heading) + "°", foot:organisation_message, fid:flightid}
 
                   function dropdown(e){
                     //e.target.closePopup() controversial, maybe only for larger screens?
