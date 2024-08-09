@@ -10,6 +10,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/leaflet.geodesic@2.7.1/dist/leaflet.geodesic.umd.min.js"></script>
   <script src="./resources/airportlocationdata.js"></script>
   <script src="./resources/liverydata.js"></script>
   <style>
@@ -404,6 +405,18 @@
 
       var myLineChart;
 
+      function nearestAirport(lat, lng){
+        for (const air in AIRPORT_LOCATION_DATA){
+          airLat = AIRPORT_LOCATION_DATA[air]['coordinates'].split(',')[0]
+          airLong = AIRPORT_LOCATION_DATA[air]['coordinates'].split(', ')[1]
+          dist = getDistanceFromLatLonInKm(lat, lng, airLat, airLong)
+          if (dist < 5){
+            return air
+          }
+        }
+        return null
+      }
+
       function airport(serverurl){
         var xhr = new XMLHttpRequest();
         xhr.open('GET', "https://ifhubapi.onrender.com/getAtcFacilities?apikey=ZNvNHJYC5IcLYUMlFpBI&sessionid=" + serverurl, true);
@@ -696,6 +709,10 @@
 
           map.setView((map.getCenter()), map.getZoom())
 
+          const Berlin = new L.LatLng(52.5, 13.35);
+          const LosAngeles = new L.LatLng(33.82, -118.38);
+          const geodesic = new L.Geodesic([Berlin, LosAngeles]).addTo(map);
+
           // NETWORK/API
 
           xhr4.open('GET', "https://ifhubapi.onrender.com/flights?apikey=ZNvNHJYC5IcLYUMlFpBI&sessionid=" + serverurl, true);
@@ -870,6 +887,9 @@
                           dist = getDistanceFromLatLonInKm(lat, long, aLat, aLong)
                           // ^ before in case start not defined.
                           startAirport = outboundFlightsDict[flightid]
+                          if (startAirport == null){
+                            startAirport = nearestAirport(response[0].Latitude, response[0].Longitude)
+                          }
                           oLat = AIRPORT_LOCATION_DATA[startAirport]['coordinates'].split(',')[0]
                           oLong = AIRPORT_LOCATION_DATA[startAirport]['coordinates'].split(', ')[1]
 
@@ -1058,6 +1078,7 @@
                          if (getDistanceFromLatLonInKm(lat, long, aLat, aLong) > 10){
                            currentplace = new L.LatLng(lat, long)
                            arrivalplace = new L.LatLng(aLat, aLong)
+
                            dashedpart = new L.Polyline([currentplace, arrivalplace], {color: 'black', dashArray : '5,5', weight: 2})
                            dashedpart.addTo(flightpath)
                          }
